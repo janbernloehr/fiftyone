@@ -383,6 +383,8 @@ def normalize_path(path):
     Returns:
         the normalized path
     """
+    if path.startswith("az://"):
+        return path
     return os.path.abspath(os.path.expanduser(path))
 
 

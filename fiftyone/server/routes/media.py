@@ -5,6 +5,7 @@ FiftyOne Server /media route
 | `voxel51.com <https://voxel51.com/>`_
 |
 """
+import os
 import typing as t
 
 import aiofiles
@@ -16,8 +17,11 @@ from starlette.responses import (
     FileResponse,
     Response,
     StreamingResponse,
+    RedirectResponse,
     guess_type,
 )
+
+from urllib.parse import urlparse
 
 
 async def ranged(
@@ -56,6 +60,21 @@ class Media(HTTPEndpoint):
         self, request: Request
     ) -> t.Union[FileResponse, StreamingResponse]:
         path = request.query_params["filepath"]
+
+        if path.startswith("az://"):
+            parsed_url = urlparse(path)
+            storage_account, _ = parsed_url.netloc.split(".", 1)
+
+            url = path.replace("az://", "https://")
+
+            sas = os.environ.get(
+                f"FO_AZURE_STORAGE_{storage_account}_SAS",
+                os.environ.get("FO_AZURE_STORAGE_SAS"),
+            )
+            if sas:
+                url += f"?{sas}"
+
+            return RedirectResponse(url=url)
 
         response: t.Union[FileResponse, StreamingResponse]
         if request.headers.get("range"):
